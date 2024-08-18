@@ -15,7 +15,6 @@ namespace FootballManagerCONSOLE
         public Stadium stadium { get; set; }
         public string City { get; set; }
         public string Country { get; set; }
-        public string Tactic { get; set; }
 
 
         #endregion
@@ -106,8 +105,6 @@ namespace FootballManagerCONSOLE
 
 
         
-
-        // Constructor
         public Club(string clubName)
         {
             ClubName = clubName;
