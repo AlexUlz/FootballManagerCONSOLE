@@ -16,8 +16,12 @@ namespace FootballManagerCONSOLE
         public List<Club> Clubs { get; set; }
         public List<Match> Matches { get; set; }
         public int CurrentSeason { get; set; }
+
         public int CurrentMatchday { get; set; }
         public int TotalMatchdays { get; set; }
+
+        public int CurrentBreakday { get; set; }
+        public int TotalBreakdays { get; set; }
 
         #endregion BASIC
 
@@ -49,6 +53,7 @@ namespace FootballManagerCONSOLE
             CurrentSeason = 1;
             CurrentMatchday = 1;
             TotalMatchdays = (numberOfTeams - 1) * 2;
+            TotalBreakdays = 14;
             Division = division;
 
             FillLeagueWithClubs();
@@ -90,14 +95,28 @@ namespace FootballManagerCONSOLE
         public void FillLeagueWithClubs()
         {
             // Add additional random clubs to fill the league
-            for (int i = 0; i < NumberOfTeams - 1; i++)
+            if(Division != 6)
             {
-                string randomClubName = GenerateRandomClubName();
-                Club randomClub = new Club(randomClubName, "Germany", "City", new Stadium($"Stadium {i + 1}", 30000));
-                FillSquadWithRandoms(4, 7, 7, 2, 20, Division, randomClub);
+                for (int i = 0; i < NumberOfTeams; i++)
+                {
+                    string randomClubName = GenerateRandomClubName();
+                    Club randomClub = new Club(randomClubName, "Germany", "City", new Stadium($"Stadium {i + 1}", 30000));
+                    FillSquadWithRandoms(4, 7, 7, 2, 20, Division, randomClub);
 
-                AddClub(randomClub);
+                    AddClub(randomClub);
+                }
+            } else
+            {
+                for (int i = 0; i < NumberOfTeams - 1; i++)
+                {
+                    string randomClubName = GenerateRandomClubName();
+                    Club randomClub = new Club(randomClubName, "Germany", "City", new Stadium($"Stadium {i + 1}", 30000));
+                    FillSquadWithRandoms(4, 7, 7, 2, 20, Division, randomClub);
+
+                    AddClub(randomClub);
+                }
             }
+            
         }
 
         public string GenerateRandomClubName()
@@ -212,30 +231,56 @@ namespace FootballManagerCONSOLE
             }
         }
 
+
         public void GenerateFixtures()
         {
+            // Clear existing fixtures if any
             Matches.Clear();
-            // Use a round-robin algorithm to generate fixtures
-            for (int i = 0; i < NumberOfTeams - 1; i++)
-            {
-                for (int j = 0; j < NumberOfTeams / 2; j++)
-                {
-                    Club homeTeam = Clubs[j];
-                    Club awayTeam = Clubs[NumberOfTeams - 2 - j];
-                    DateTime matchDate = new DateTime(CurrentSeason, 8, 1).AddDays((i * NumberOfTeams / 2 + j) * 7); // Example date logic
 
-                    Matches.Add(new Match(homeTeam, awayTeam, matchDate));
-                }
-                // Rotate clubs except the first one
-                var lastClub = Clubs[NumberOfTeams - 2];
-                Clubs.RemoveAt(NumberOfTeams - 2);
-                Clubs.Insert(1, lastClub);
+            // Ensure we have an even number of teams for the round-robin
+            if (NumberOfTeams % 2 != 0)
+            {
+                throw new InvalidOperationException("Number of teams must be even for double round-robin scheduling.");
             }
 
-            // Repeat the same for the second half of the season (switching home and away)
-            var secondHalfMatches = Matches.Select(m => new Match(m.awayClub, m.homeClub, m.date)).ToList();
-            Matches.AddRange(secondHalfMatches);
+            List<Club> clubs = Clubs.ToList();
+            int totalRounds = NumberOfTeams - 1; // Number of rounds in one round-robin
+            int totalMatchdays = totalRounds * 2; // Double round-robin
+
+            // Generate fixtures for the first half of the season
+            for (int round = 0; round < totalRounds; round++)
+            {
+                for (int i = 0; i < NumberOfTeams / 2; i++)
+                {
+                    Club homeClub = clubs[i];
+                    Club awayClub = clubs[NumberOfTeams - 1 - i];
+
+                    // Add the match for the first leg
+                    Matches.Add(new Match(homeClub, awayClub));
+                }
+
+                // Rotate the teams except for the first team
+                Club lastClub = clubs.Last();
+                for (int j = NumberOfTeams - 1; j > 1; j--)
+                {
+                    clubs[j] = clubs[j - 1];
+                }
+                clubs[1] = lastClub;
+            }
+
+            // Generate fixtures for the second half of the season by reversing the home and away teams
+            foreach (var match in Matches.ToList())
+            {
+                // Create a new match with reversed home and away teams for the second half
+                Matches.Add(new Match(match.awayClub, match.homeClub));
+            }
+
+            // Update the total matchdays
+            TotalMatchdays = Matches.Count / (NumberOfTeams / 2);
+
+            Console.WriteLine("Fixtures have been generated.");
         }
+
 
         public void SimulateMatchday()
         {
@@ -253,6 +298,7 @@ namespace FootballManagerCONSOLE
                 // Simulate match using Match class
                 int[] result = match.Simulate();
                 RecordMatchResult(match.homeClub, match.awayClub, result[0], result[1]);
+                Console.WriteLine("{0} | {1} : {2} | {3}", match.homeClub.ClubName, result[0], result[1], match.awayClub.ClubName);
             }
 
             CurrentMatchday++;
@@ -270,7 +316,7 @@ namespace FootballManagerCONSOLE
             return LeagueTable.OrderByDescending(c => c.Value)
                               .ThenByDescending(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
                               .FirstOrDefault().Key;
-        }
+        } //1st
 
         public Club GetSecondPlaced()
         {
@@ -278,7 +324,7 @@ namespace FootballManagerCONSOLE
                               .ThenByDescending(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
                               .Skip(1) // Skip the first (champion)
                               .FirstOrDefault().Key;
-        }
+        } //2nd
 
         public Club GetThirdPlaced()
         {
@@ -286,32 +332,48 @@ namespace FootballManagerCONSOLE
                               .ThenByDescending(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
                               .Skip(2) // Skip the first two (champion and second placed)
                               .FirstOrDefault().Key;
-        }
+        } //3rd
+
+
+        public Club GetRelegationPlayOffClub()
+        {
+            return LeagueTable.OrderBy(c => c.Value)
+                              .ThenBy(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
+                              .Skip(2) // Skip the last two clubs
+                              .FirstOrDefault().Key;
+        } //18th
+
+        public Club GetRelegationClub()
+        {
+            return LeagueTable.OrderBy(c => c.Value)
+                              .ThenBy(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
+                              .Skip(1) // Skip the last club
+                              .FirstOrDefault().Key;
+        } //19th
 
         public Club GetLastClub()
         {
             return LeagueTable.OrderBy(c => c.Value)
                               .ThenBy(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
                               .FirstOrDefault().Key; // The last place in ascending order is the first in the list
-        }
+        } //20th
 
-        public Club GetPenultimateClub()
+
+        public void ShowPromotionClubs()
         {
-            return LeagueTable.OrderBy(c => c.Value)
-                              .ThenBy(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
-                              .Skip(1) // Skip the last club
-                              .FirstOrDefault().Key;
+            Console.WriteLine("Promotion: {0} and {1}", GetChampion().ClubName, GetSecondPlaced().ClubName);
         }
 
-        public Club GetRelegationClub()
+        public void ShowRelegationClubs()
         {
-            return LeagueTable.OrderBy(c => c.Value)
-                              .ThenBy(c => GoalsScored[c.Key] - GoalsConceded[c.Key])
-                              .Skip(2) // Skip the last two clubs
-                              .FirstOrDefault().Key;
+            Console.WriteLine("Relegation: {0} and {1}", GetRelegationClub().ClubName, GetLastClub().ClubName);
         }
 
-
+        public void ShowPlayOffsClubs()
+        {
+            Console.WriteLine("Promotion Play-Offs: " + GetThirdPlaced().ClubName);
+            Console.WriteLine( "Relegation Play-Offs: " + GetRelegationPlayOffClub().ClubName);
+        }
         #endregion
 
         #endregion FUNCTIONS

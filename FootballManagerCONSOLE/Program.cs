@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace FootballManagerCONSOLE
 {
@@ -23,14 +24,14 @@ namespace FootballManagerCONSOLE
 
             LeagueSystem bundesligaSystem = new LeagueSystem(leagueLevel-1);
             bundesligaSystem.AddMyClubToSystem(myClub);
-
-
-
-            // Generate fixtures for the league
-            bundesligaSystem.GenerateAllFixtures();
+            league = bundesligaSystem.leagues[leagueLevel-1];
 
             // Start the simulation loop
             DateTime gameDate = new DateTime(DateTime.Now.Year, 6, 1);
+            // Generate fixtures for the league
+            bundesligaSystem.GenerateAllFixtures();
+
+            
 
             while (true)
             {
@@ -63,14 +64,27 @@ namespace FootballManagerCONSOLE
                         Console.WriteLine("Press Enter to continue...");
                         Console.ReadLine();
                     }
-                }
+                } //LEAGUE PHASE
+
                 Console.WriteLine("Season is over!");
                 Console.WriteLine("Final League Table:");
                 league.DisplayLeagueTable();
-                Console.WriteLine("Press any key to start new season");
-                Console.ReadLine();
 
-                //Setup for new season
+                league.ShowPromotionClubs();
+                league.ShowRelegationClubs();
+                league.ShowPlayOffsClubs();
+
+                while (!bundesligaSystem.isSummerPauseOver(bundesligaSystem.leagues[leagueLevel - 1])) 
+                {
+                    if(Console.ReadLine() == "next")
+                    {
+                        league.CurrentBreakday++;
+                        gameDate = gameDate.AddDays(7);
+                    }
+                    
+
+                } //SUMMER PAUSE PHASE
+
             }
         }
 
@@ -100,6 +114,7 @@ namespace FootballManagerCONSOLE
 
             return club;
         }
-        
+
+
     }
 }

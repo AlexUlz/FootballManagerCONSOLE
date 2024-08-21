@@ -15,11 +15,11 @@ namespace FootballManagerCONSOLE
         public int awayGoal { get; set;}
         private Random rand = new Random();
 
-        public Match(Club _home, Club _away, DateTime _date)
+        public Match(Club _home, Club _away)
         {
             homeClub = _home;
             awayClub = _away;
-            date = _date;
+            //date = _date;
         }
 
         public int[] Simulate()
